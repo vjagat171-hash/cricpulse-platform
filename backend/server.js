@@ -1,22 +1,52 @@
+// backend/server.js
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const axios = require('axios'); // Asli API se data mangwane ke liye
 
 const app = express();
-app.use(cors());
+
+// Middleware setup
+app.use(cors()); // Frontend ko allow karne ke liye
+app.use(express.json());
+
+// Yahan apni poori copy ki hui API key daalein
+const API_KEY = '14c3542c-237f-4762-YAHAN_AAGE_KI_KEY_HOGI'; 
 
 // HTTP server aur Socket.io setup
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: "http://localhost:5173", methods: ["GET", "POST"] } // Vite ka default port
+    cors: { 
+        origin: "http://localhost:5173", // Vite ka default port
+        methods: ["GET", "POST"] 
+    }
 });
 
-io.on('connection', (socket) => {
-    console.log(`User Connected: ${socket.id}`);
+// ==========================================
+// 1. REST API Endpoint (Real Live Matches Data via CricAPI)
+// ==========================================
+app.get('/api/live-matches', async (req, res) => {
+  try {
+    const url = `https://api.cricapi.com/v1/currentMatches?apikey=${API_KEY}&offset=0`;
+    const response = await axios.get(url);
+    
+    // API se aaya data frontend ko bhej rahe hain
+    res.json(response.data.data); 
+    
+  } catch (error) {
+    console.error("Live match fetch karne mein error:", error.message);
+    res.status(500).json({ error: "Failed to fetch live matches" });
+  }
+});
 
-    // Simulation: Real-time API ya database se data aane ka natak (mock data)
-    // Asli project mein aap yahan Sportradar ya CricAPI ka live data pass karenge
+// ==========================================
+// 2. Socket.io (Real-time Updates Simulation)
+// ==========================================
+io.on('connection', (socket) => {
+    console.log(`🟢 User Connected: ${socket.id}`);
+
+    // Simulation: Har 2 second mein real-time data emit karega
     const liveMatchInterval = setInterval(() => {
         const liveData = {
             matchId: "IPL_FINAL_01",
@@ -32,15 +62,19 @@ io.on('connection', (socket) => {
 
         // Emit data to all connected React clients
         socket.emit('live-match-update', liveData);
-    }, 2000); // Har 2 second mein naya data bhejega
+    }, 2000); 
 
+    // User disconnect hone par interval clear karein
     socket.on('disconnect', () => {
-        console.log('User Disconnected');
+        console.log(`🔴 User Disconnected: ${socket.id}`);
         clearInterval(liveMatchInterval);
     });
 });
 
-const PORT = 5000;
+// ==========================================
+// 3. Start the Server
+// ==========================================
+const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-    console.log(`Live Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Final Server running on http://localhost:${PORT}`);
 });
