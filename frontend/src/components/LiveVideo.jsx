@@ -1,8 +1,19 @@
 export default function LiveVideo({ embedUrl, title = "Live Match Video" }) {
-  if (!embedUrl) {
+  const isValidEmbed =
+    typeof embedUrl === "string" &&
+    embedUrl.trim() !== "" &&
+    (
+      embedUrl.includes("youtube.com/embed/") ||
+      embedUrl.includes("player.vimeo.com/video/")
+    );
+
+  if (!embedUrl || !isValidEmbed) {
     return (
-      <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 p-8 text-center text-slate-300">
-        Live video abhi available nahi hai.
+      <div className="rounded-[2rem] border border-dashed border-white/10 bg-white/5 p-8 text-center text-slate-300">
+        <p className="text-lg font-semibold text-white">Official live video unavailable</p>
+        <p className="mt-2 text-sm text-slate-400">
+          Abhi sirf live score, batter-vs-bowler details, aur match insights show honge.
+        </p>
       </div>
     );
   }

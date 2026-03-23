@@ -10,7 +10,7 @@ import TeamsPage from "./pages/TeamsPage";
 import NewsPage from "./pages/NewsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import LiveMatches from "./components/LiveMatches";
-
+import LiveCenterPage from "./pages/LiveCenterPage";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const fallbackData = {
@@ -35,6 +35,7 @@ const fallbackData = {
     recentOvers: ["1 4 1 0 6 2", "1 1 4 W 2 1", "6 1 1 2 4 0"],
     winProbability: { batting: 64, bowling: 36 },
     lastBall: "4",
+    embedUrl: "",
   },
   schedule: [
     {
@@ -110,6 +111,7 @@ const normalizeLiveMatch = (data) => {
       ? data.recentOvers
       : fallbackData.liveMatch.recentOvers,
     winProbability: data.winProbability || fallbackData.liveMatch.winProbability,
+    embedUrl: typeof data.embedUrl === "string" ? data.embedUrl : "",
   };
 };
 
@@ -200,6 +202,7 @@ export default function App() {
             <Route path="/teams" element={<TeamsPage teams={teams} />} />
             <Route path="/news" element={<NewsPage news={news} />} />
             <Route path="*" element={<NotFoundPage />} />
+            <Route path="/live-center" element={<LiveCenterPage />} />
           </Routes>
         </main>
 
