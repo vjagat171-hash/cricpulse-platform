@@ -1,40 +1,17 @@
 import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import useLiveMatch from "../hooks/useLiveMatch";
 
+// Socket setup
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 const socket = io(API_BASE_URL, { transports: ["websocket", "polling"] });
 
-const cardStyle = {
-  background: "#1f2937",
-  border: "1px solid #374151",
-  borderRadius: "16px",
-  padding: "18px",
-  boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
-};
-
-const LiveMatches = () => {
-  const [matches, setMatches] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function LiveMatches() {
+  const { matches, loading, error } = useLiveMatch();
   const [realTimeMatch, setRealTimeMatch] = useState(null);
-  const [error, setError] = useState("");
 
+  // Real-time socket listener for the featured match
   useEffect(() => {
-    const fetchMatches = async () => {
-      try {
-        setLoading(true);
-        setError("");
-        const res = await fetch(`${API_BASE_URL}/api/live-matches`);
-        const data = await res.json();
-        setMatches(Array.isArray(data) ? data : []);
-      } catch (err) {
-        setError("Live API failed, fallback data loaded.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMatches();
-
     socket.on("live-match-update", (data) => {
       setRealTimeMatch(data);
     });
@@ -46,98 +23,118 @@ const LiveMatches = () => {
 
   if (loading) {
     return (
-      <h2 style={{ color: "white", textAlign: "center", marginTop: "50px" }}>
-        Live matches loading...
-      </h2>
+      <div className="flex min-h-screen items-center justify-center bg-[#121212] p-5">
+        <div className="rounded-[28px] border border-white/10 bg-slate-900/80 p-10 text-center text-slate-300 shadow-xl">
+          Live matches loading...
+        </div>
+      </div>
     );
   }
 
   return (
-    <div
-      style={{
-        padding: "20px",
-        fontFamily: "Arial, sans-serif",
-        color: "white",
-        backgroundColor: "#121212",
-        minHeight: "100vh",
-      }}
-    >
-      <h2 style={{ textAlign: "center", marginBottom: "30px", color: "#4da6ff" }}>
-        🏏 CricPulse Dashboard
-      </h2>
+    <div className="min-h-screen bg-[#121212] p-5 font-sans">
+      <div className="mx-auto max-w-7xl space-y-8">
+        
+        {/* Header */}
+        <h2 className="mt-4 text-center text-3xl font-black text-sky-400 drop-shadow-md md:text-4xl">
+          🏏 CricPulse Dashboard
+        </h2>
 
-      {error ? (
-        <p style={{ textAlign: "center", color: "#fbbf24", marginBottom: "16px" }}>{error}</p>
-      ) : null}
-
-      {realTimeMatch ? (
-        <div style={{ marginBottom: "32px", display: "flex", justifyContent: "center" }}>
-          <div
-            style={{
-              width: "100%",
-              maxWidth: "760px",
-              border: "2px solid #00e676",
-              borderRadius: "16px",
-              padding: "20px",
-              background: "linear-gradient(135deg, #122417, #1a3300)",
-              boxShadow: "0 0 24px rgba(0, 230, 118, 0.2)",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
-              <span style={{ color: "#00e676", fontWeight: "bold", letterSpacing: "1px" }}>
-                FEATURED LIVE
-              </span>
-              <span style={{ color: "#e5e7eb" }}>{realTimeMatch.status}</span>
-            </div>
-
-            <h3 style={{ margin: "14px 0 16px", fontSize: "24px" }}>
-              {realTimeMatch.teamA} vs {realTimeMatch.teamB}
-            </h3>
-
-            <div style={{ display: "grid", gap: "14px", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-              <div style={cardStyle}>
-                <p style={{ color: "#93c5fd", margin: 0, fontSize: "13px" }}>{realTimeMatch.teamA}</p>
-                <h4 style={{ margin: "8px 0 0", fontSize: "24px" }}>{realTimeMatch.scoreA}</h4>
-              </div>
-
-              <div style={cardStyle}>
-                <p style={{ color: "#fcd34d", margin: 0, fontSize: "13px" }}>{realTimeMatch.teamB}</p>
-                <h4 style={{ margin: "8px 0 0", fontSize: "24px" }}>{realTimeMatch.scoreB}</h4>
-              </div>
-            </div>
-
-            <div style={{ marginTop: "16px", color: "#d1d5db", fontSize: "14px" }}>
-              Last Ball: <strong>{realTimeMatch.lastBall}</strong>
-            </div>
+        {/* Error State */}
+        {error ? (
+          <div className="mx-auto max-w-2xl rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-center text-sm text-amber-200">
+            {error}
           </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      <div
-        style={{
-          display: "grid",
-          gap: "16px",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-        }}
-      >
-        {matches.length > 0 ? (
-          matches.map((match) => (
-            <div key={match.id} style={cardStyle}>
-              <p style={{ color: "#93c5fd", marginBottom: "8px", fontSize: "14px" }}>{match.status}</p>
-              <h3 style={{ margin: "0 0 10px", fontSize: "20px" }}>{match.name}</h3>
-              <p style={{ margin: "6px 0", color: "#d1d5db" }}>Venue: {match.venue}</p>
-              <p style={{ margin: "6px 0" }}>{match.teamA}: {match.score}</p>
-              <p style={{ margin: "6px 0" }}>{match.teamB}: {match.scoreB}</p>
+        {/* FEATURED LIVE MATCH (Real-Time from Socket) */}
+        {realTimeMatch && (
+          <div className="flex justify-center">
+            <div className="w-full max-w-3xl rounded-[24px] border-2 border-emerald-500/80 bg-gradient-to-br from-[#122417] to-[#1a3300] p-6 shadow-[0_0_24px_rgba(0,230,118,0.15)]">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <span className="text-sm font-bold tracking-[0.15em] text-emerald-400 drop-shadow-sm">
+                  ● FEATURED LIVE
+                </span>
+                <span className="rounded-full border border-emerald-500/30 bg-emerald-900/50 px-3 py-1 text-xs font-medium text-emerald-100">
+                  {realTimeMatch.status}
+                </span>
+              </div>
+
+              <h3 className="my-5 text-center text-2xl font-black text-white md:text-left">
+                {realTimeMatch.teamA} <span className="text-emerald-500">vs</span> {realTimeMatch.teamB}
+              </h3>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-white/5 bg-slate-950/60 p-5 shadow-inner">
+                  <p className="text-xs font-semibold uppercase tracking-[0.15em] text-sky-400">
+                    {realTimeMatch.teamA}
+                  </p>
+                  <h4 className="mt-2 text-3xl font-black text-white">
+                    {realTimeMatch.scoreA}
+                  </h4>
+                </div>
+
+                <div className="rounded-2xl border border-white/5 bg-slate-950/60 p-5 shadow-inner">
+                  <p className="text-xs font-semibold uppercase tracking-[0.15em] text-amber-400">
+                    {realTimeMatch.teamB}
+                  </p>
+                  <h4 className="mt-2 text-3xl font-black text-white">
+                    {realTimeMatch.scoreB}
+                  </h4>
+                </div>
+              </div>
+
+              <div className="mt-5 flex items-center gap-2 text-sm text-slate-300">
+                <span className="opacity-80">Last Ball:</span>
+                <strong className="rounded bg-white/10 px-2 py-0.5 text-white">
+                  {realTimeMatch.lastBall || "-"}
+                </strong>
+              </div>
             </div>
-          ))
-        ) : (
-          <div style={{ ...cardStyle, gridColumn: "1 / -1", textAlign: "center" }}>
-            <p style={{ color: "#9ca3af", margin: 0 }}>No live matches available right now.</p>
           </div>
         )}
+
+        {/* ALL LIVE MATCHES GRID (From Custom Hook) */}
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {matches.length ? (
+            matches.map((match) => (
+              <article
+                key={match.id}
+                className="rounded-[24px] border border-white/10 bg-slate-900/80 p-5 shadow-xl transition duration-300 hover:-translate-y-1 hover:border-emerald-400/20"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">
+                    {match.status}
+                  </p>
+                  <span className="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
+                    {match.lastBall || "Live"}
+                  </span>
+                </div>
+
+                <h3 className="mt-3 text-xl font-black text-white">{match.name}</h3>
+                <p className="mt-2 text-sm text-slate-400">{match.venue}</p>
+
+                <div className="mt-5 space-y-3">
+                  <div className="rounded-2xl bg-slate-950/70 p-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-sky-400">{match.teamA}</p>
+                    <p className="mt-2 text-2xl font-black text-white">{match.scoreA || match.score}</p>
+                  </div>
+
+                  <div className="rounded-2xl bg-slate-950/70 p-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-amber-400">{match.teamB}</p>
+                    <p className="mt-2 text-2xl font-black text-white">{match.scoreB}</p>
+                  </div>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="rounded-[24px] border border-dashed border-white/10 bg-slate-900/70 p-10 text-center text-slate-400 md:col-span-2 xl:col-span-3">
+              No live matches available right now.
+            </div>
+          )}
+        </div>
+        
       </div>
     </div>
   );
-};
-
-export default LiveMatches;
+}

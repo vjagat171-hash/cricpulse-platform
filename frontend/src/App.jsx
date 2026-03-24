@@ -11,12 +11,14 @@ import NewsPage from "./pages/NewsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import LiveMatches from "./components/LiveMatches";
 import LiveCenterPage from "./pages/LiveCenterPage";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const fallbackData = {
   liveMatch: {
     id: 1,
     matchId: "fallback-1",
+    name: "Mumbai Mavericks vs Delhi Dynamos",
     status: "Live · 2nd Innings",
     venue: "Wankhede Stadium, Mumbai",
     battingTeam: "Mumbai Mavericks",
@@ -100,6 +102,7 @@ const normalizeLiveMatch = (data) => {
   return {
     ...fallbackData.liveMatch,
     ...data,
+    name: data.name || `${teamA} vs ${teamB}`,
     teamA,
     teamB,
     battingTeam: data.battingTeam || teamA,
@@ -111,6 +114,9 @@ const normalizeLiveMatch = (data) => {
       ? data.recentOvers
       : fallbackData.liveMatch.recentOvers,
     winProbability: data.winProbability || fallbackData.liveMatch.winProbability,
+    striker: data.striker || fallbackData.liveMatch.striker,
+    nonStriker: data.nonStriker || fallbackData.liveMatch.nonStriker,
+    bowler: data.bowler || fallbackData.liveMatch.bowler,
     embedUrl: typeof data.embedUrl === "string" ? data.embedUrl : "",
   };
 };
@@ -158,6 +164,9 @@ export default function App() {
         if (!active) return;
         setError("Live server unavailable, fallback data is being used.");
         setLiveMatch(fallbackData.liveMatch);
+        setSchedule(fallbackData.schedule);
+        setTeams(fallbackData.teams);
+        setNews(fallbackData.news);
       } finally {
         if (active) setLoading(false);
       }
@@ -198,11 +207,11 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/live" element={<LivePage match={liveMatch} loading={loading} />} />
             <Route path="/live-matches" element={<LiveMatches />} />
+            <Route path="/live-center" element={<LiveCenterPage />} />
             <Route path="/schedule" element={<SchedulePage schedule={schedule} />} />
             <Route path="/teams" element={<TeamsPage teams={teams} />} />
             <Route path="/news" element={<NewsPage news={news} />} />
             <Route path="*" element={<NotFoundPage />} />
-            <Route path="/live-center" element={<LiveCenterPage />} />
           </Routes>
         </main>
 
