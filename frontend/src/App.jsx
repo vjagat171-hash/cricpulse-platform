@@ -1,244 +1,132 @@
-import { useEffect, useRef, useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { io } from "socket.io-client";
+import { lazy, Suspense, useEffect } from "react";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
-import HomePage from "./pages/HomePage";
-import LivePage from "./pages/LivePage";
-import SchedulePage from "./pages/SchedulePage";
-import TeamsPage from "./pages/TeamsPage";
-import NewsPage from "./pages/NewsPage";
-import NotFoundPage from "./pages/NotFoundPage";
-import LiveMatches from "./components/LiveMatches";
-import LiveCenterPage from "./pages/LiveCenterPage";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const HomePage = lazy(() => import("./pages/HomePage"));
+const LivePage = lazy(() => import("./pages/LivePage"));
+const LiveCenterPage = lazy(() => import("./pages/LiveCenterPage"));
+const SchedulePage = lazy(() => import("./pages/SchedulePage"));
+const TeamsPage = lazy(() => import("./pages/TeamsPage"));
+const NewsPage = lazy(() => import("./pages/NewsPage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+const LiveMatches = lazy(() => import("./components/LiveMatches"));
+const SeriesPage = lazy(() => import("./pages/SeriesPage"));
+const PointsTablePage = lazy(() => import("./pages/PointsTablePage"));
+const PlayersPage = lazy(() => import("./pages/PlayersPage"));
+const MatchDetailsPage = lazy(() => import("./pages/MatchDetailsPage"));
+const SearchPage = lazy(() => import("./pages/SearchPage"));
 
-const fallbackData = {
-  liveMatch: {
-    id: 1,
-    matchId: "fallback-1",
-    name: "Mumbai Mavericks vs Delhi Dynamos",
-    status: "Live · 2nd Innings",
-    venue: "Wankhede Stadium, Mumbai",
-    battingTeam: "Mumbai Mavericks",
-    bowlingTeam: "Delhi Dynamos",
-    teamA: "Mumbai Mavericks",
-    teamB: "Delhi Dynamos",
-    score: "168/4",
-    scoreA: "168/4 (17.2)",
-    scoreB: "Yet to bat",
-    overs: "17.2",
-    required: "Need 24 runs in 16 balls",
-    striker: { name: "S. Yadav", runs: 58, balls: 34, sr: 170.5 },
-    nonStriker: { name: "H. Pandya", runs: 21, balls: 12, sr: 175.0 },
-    bowler: { name: "K. Yadav", overs: "3.2", runs: 28, wickets: 1 },
-    partnership: "42 runs off 19 balls",
-    recentOvers: ["1 4 1 0 6 2", "1 1 4 W 2 1", "6 1 1 2 4 0"],
-    winProbability: { batting: 64, bowling: 36 },
-    lastBall: "4",
-    embedUrl: "",
-    hotstarUrl: "https://www.hotstar.com/in/sports/cricket",
-  },
-  schedule: [
-    {
-      id: 1,
-      date: "2026-03-22",
-      time: "7:30 PM",
-      teams: "Mumbai Mavericks vs Delhi Dynamos",
-      venue: "Wankhede Stadium",
-      status: "Live",
-    },
-    {
-      id: 2,
-      date: "2026-03-23",
-      time: "3:30 PM",
-      teams: "Chennai Kings vs Bengaluru Blasters",
-      venue: "Chepauk",
-      status: "Upcoming",
-    },
-  ],
-  teams: [
-    {
-      id: 1,
-      name: "Mumbai Mavericks",
-      short: "MM",
-      captain: "R. Sharma",
-      venue: "Wankhede Stadium",
-      form: "W-W-L-W",
-    },
-    {
-      id: 2,
-      name: "Delhi Dynamos",
-      short: "DD",
-      captain: "R. Pant",
-      venue: "Arun Jaitley Stadium",
-      form: "L-W-W-L",
-    },
-  ],
-  news: [
-    {
-      id: 1,
-      title: "Powerplay pressure defines tonight's batting battle",
-      tag: "Analysis",
-      readTime: "4 min read",
-    },
-    {
-      id: 2,
-      title: "Death-over strike rotation trends to watch",
-      tag: "Numbers",
-      readTime: "5 min read",
-    },
-  ],
-};
+const routeConfig = [
+  { path: "/", element: <HomePage />, label: "Home" },
+  { path: "/live", element: <LivePage />, label: "Live" },
+  { path: "/live-center", element: <LiveCenterPage />, label: "Center" },
+  { path: "/live-matches", element: <LiveMatches />, label: "Matches" },
+  { path: "/schedule", element: <SchedulePage />, label: "Schedule" },
+  { path: "/teams", element: <TeamsPage />, label: "Teams" },
+  { path: "/players", element: <PlayersPage />, label: "Players" },
+  { path: "/series", element: <SeriesPage />, label: "Series" },
+  { path: "/points-table", element: <PointsTablePage />, label: "Table" },
+  { path: "/news", element: <NewsPage />, label: "News" },
+  { path: "/search", element: <SearchPage />, label: "Search" },
+];
 
-const normalizeLiveMatch = (data) => {
-  if (!data) return fallbackData.liveMatch;
+function PageLoader() {
+  return (
+    <div className="grid min-h-[45vh] place-items-center rounded-[28px] border border-white/10 bg-slate-900/70 px-6 py-16 text-center shadow-xl">
+      <div>
+        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-emerald-400/20 border-t-emerald-400" />
+        <p className="mt-4 text-sm font-medium tracking-[0.18em] text-slate-400 uppercase">Loading CricPulse</p>
+      </div>
+    </div>
+  );
+}
 
-  const teamA = data.teamA || data.battingTeam || fallbackData.liveMatch.teamA;
-  const teamB = data.teamB || data.bowlingTeam || fallbackData.liveMatch.teamB;
-  const scoreA = data.scoreA || data.score || fallbackData.liveMatch.scoreA;
-  const scoreB = data.scoreB || fallbackData.liveMatch.scoreB;
-
-  return {
-    ...fallbackData.liveMatch,
-    ...data,
-    name: data.name || `${teamA} vs ${teamB}`,
-    teamA,
-    teamB,
-    battingTeam: data.battingTeam || teamA,
-    bowlingTeam: data.bowlingTeam || teamB,
-    score: data.score || scoreA,
-    scoreA,
-    scoreB,
-    recentOvers: Array.isArray(data.recentOvers)
-      ? data.recentOvers
-      : fallbackData.liveMatch.recentOvers,
-    winProbability: data.winProbability || fallbackData.liveMatch.winProbability,
-    striker: data.striker || fallbackData.liveMatch.striker,
-    nonStriker: data.nonStriker || fallbackData.liveMatch.nonStriker,
-    bowler: data.bowler || fallbackData.liveMatch.bowler,
-    embedUrl: typeof data.embedUrl === "string" ? data.embedUrl : "",
-    hotstarUrl:
-      typeof data.hotstarUrl === "string"
-        ? data.hotstarUrl
-        : fallbackData.liveMatch.hotstarUrl,
-  };
-};
-
-export default function App() {
-  const [liveMatch, setLiveMatch] = useState(fallbackData.liveMatch);
-  const [schedule, setSchedule] = useState(fallbackData.schedule);
-  const [teams, setTeams] = useState(fallbackData.teams);
-  const [news, setNews] = useState(fallbackData.news);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const serverReachableRef = useRef(false);
+function ScrollToTop() {
+  const { pathname } = useLocation();
 
   useEffect(() => {
-    let active = true;
-    const socket = io(API_BASE_URL, {
-      transports: ["websocket", "polling"],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      timeout: 10000,
-    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [pathname]);
 
-    const loadInitialData = async () => {
-      try {
-        setLoading(true);
-        setError("");
+  return null;
+}
 
-        const [liveRes, scheduleRes, teamsRes, newsRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/live-match`),
-          fetch(`${API_BASE_URL}/api/schedule`),
-          fetch(`${API_BASE_URL}/api/teams`),
-          fetch(`${API_BASE_URL}/api/news`),
-        ]);
-
-        if (!active) return;
-
-        serverReachableRef.current = true;
-
-        const liveData = liveRes.ok ? await liveRes.json() : fallbackData.liveMatch;
-        const scheduleData = scheduleRes.ok ? await scheduleRes.json() : fallbackData.schedule;
-        const teamsData = teamsRes.ok ? await teamsRes.json() : fallbackData.teams;
-        const newsData = newsRes.ok ? await newsRes.json() : fallbackData.news;
-
-        setLiveMatch(normalizeLiveMatch(liveData));
-        setSchedule(Array.isArray(scheduleData) ? scheduleData : fallbackData.schedule);
-        setTeams(Array.isArray(teamsData) ? teamsData : fallbackData.teams);
-        setNews(Array.isArray(newsData) ? newsData : fallbackData.news);
-        setError("");
-      } catch (err) {
-        if (!active) return;
-        serverReachableRef.current = false;
-        setError("Backend server reachable nahi hai, isliye fallback demo data show ho raha hai.");
-        setLiveMatch(fallbackData.liveMatch);
-        setSchedule(fallbackData.schedule);
-        setTeams(fallbackData.teams);
-        setNews(fallbackData.news);
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    loadInitialData();
-
-    socket.on("connect", () => {
-      if (!active) return;
-      if (serverReachableRef.current) {
-        setError("");
-      }
-    });
-
-    socket.on("connect_error", () => {
-      if (!active) return;
-      if (!serverReachableRef.current) {
-        setError("Realtime socket connect nahi ho paaya, fallback data active hai.");
-      }
-    });
-
-    socket.on("live-match-update", (payload) => {
-      if (!active || !payload) return;
-      setLiveMatch((prev) => normalizeLiveMatch({ ...prev, ...payload }));
-    });
-
-    return () => {
-      active = false;
-      socket.off("connect");
-      socket.off("connect_error");
-      socket.off("live-match-update");
-      socket.disconnect();
-    };
-  }, []);
+function MobileQuickNav() {
+  const { pathname } = useLocation();
+  const quickItems = routeConfig.slice(0, 5);
 
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-slate-950 text-white">
-        <Header />
+    <div className="fixed inset-x-3 bottom-3 z-40 rounded-[24px] border border-white/10 bg-slate-950/90 p-2 shadow-2xl backdrop-blur md:hidden">
+      <div className="grid grid-cols-5 gap-2">
+        {quickItems.map((item) => {
+          const active = pathname === item.path;
+          return (
+            <a
+              key={item.path}
+              href={item.path}
+              className={[
+                "rounded-2xl px-2 py-3 text-center text-[11px] font-semibold transition",
+                active
+                  ? "bg-emerald-400 text-slate-950"
+                  : "bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white",
+              ].join(" ")}
+            >
+              {item.label}
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
-        {error ? (
-          <div className="border-b border-amber-400/20 bg-amber-500/10 px-4 py-3 text-center text-sm text-amber-200">
-            {error}
-          </div>
-        ) : null}
+function AppShell() {
+  return (
+    <div className="min-h-screen bg-slate-950 text-white">
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute left-[-10%] top-[-10%] h-72 w-72 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="absolute right-[-8%] top-[10%] h-80 w-80 rounded-full bg-cyan-500/10 blur-3xl" />
+        <div className="absolute bottom-[-10%] left-[20%] h-96 w-96 rounded-full bg-violet-500/10 blur-3xl" />
+      </div>
 
-        <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <ScrollToTop />
+      <Header />
+
+      <section className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 pt-6 sm:px-6 lg:px-8">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-400">CricPulse Platform</p>
+          <h1 className="mt-2 text-2xl font-black text-white sm:text-3xl">Advanced live cricket experience</h1>
+        </div>
+        <div className="hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right md:block">
+          <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Experience</p>
+          <p className="mt-1 text-sm font-semibold text-white">Responsive routes, live center, search, stats</p>
+        </div>
+      </section>
+
+      <main className="mx-auto max-w-7xl px-4 py-8 pb-28 sm:px-6 lg:px-8 lg:pb-10">
+        <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/live" element={<LivePage match={liveMatch} loading={loading} />} />
-            <Route path="/live-matches" element={<LiveMatches />} />
-            <Route path="/live-center" element={<LiveCenterPage />} />
-            <Route path="/schedule" element={<SchedulePage schedule={schedule} />} />
-            <Route path="/teams" element={<TeamsPage teams={teams} />} />
-            <Route path="/news" element={<NewsPage news={news} />} />
+            {routeConfig.map((route) => (
+              <Route key={route.path} path={route.path} element={route.element} />
+            ))}
+            <Route path="/match/:id" element={<MatchDetailsPage />} />
+            <Route path="/home" element={<Navigate to="/" replace />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
-        </main>
+        </Suspense>
+      </main>
 
-        <Footer />
-      </div>
+      <Footer />
+      <MobileQuickNav />
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppShell />
     </BrowserRouter>
   );
 }

@@ -1,78 +1,94 @@
 import { Link } from "react-router-dom";
 
 const footerLinks = {
-  Platform: [
-    { label: "Home", to: "/" },
-    { label: "Live", to: "/live" },
-    { label: "Live Center", to: "/live-center" },
-    { label: "Live Matches", to: "/live-matches" },
+  platform: [
+    { label: "Home", path: "/" },
+    { label: "Live", path: "/live" },
+    { label: "Live Center", path: "/live-center" },
+    { label: "Live Matches", path: "/live-matches" },
   ],
-  Explore: [
-    { label: "Schedule", to: "/schedule" },
-    { label: "Teams", to: "/teams" },
-    { label: "News", to: "/news" },
+  explore: [
+    { label: "Schedule", path: "/schedule" },
+    { label: "Teams", path: "/teams" },
+    { label: "Players", path: "/players" },
+    { label: "Series", path: "/series" },
+  ],
+  insights: [
+    { label: "Points Table", path: "/points-table" },
+    { label: "News", path: "/news" },
+    { label: "Search", path: "/search" },
   ],
 };
 
+function FooterColumn({ title, items }) {
+  return (
+    <div>
+      <h3 className="text-sm font-black uppercase tracking-[0.18em] text-white">{title}</h3>
+      <div className="mt-4 space-y-3">
+        {items.map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            className="block text-sm text-slate-400 transition hover:text-emerald-300"
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Footer() {
   return (
-    <footer className="mt-16 border-t border-white/10 bg-slate-950/95">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-[28px] border border-white/10 bg-white/5 p-6 shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-400/15 font-black text-emerald-300">
-                CP
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-white">CricPulse</h3>
-                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Live batting hub</p>
-              </div>
+    <footer className="relative border-t border-white/10 bg-slate-950/90 backdrop-blur-xl">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
+
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr] lg:px-8">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-400 text-sm font-black text-slate-950 shadow-lg shadow-emerald-500/20">
+              CP
             </div>
-
-            <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300">
-              Modern cricket experience for live match tracking, batting-focused scoreboards, recent overs, team pages, and responsive sports UI.
-            </p>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Link
-                to="/live-center"
-                className="inline-flex items-center justify-center rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
-              >
-                Open Match Center
-              </Link>
-              <Link
-                to="/schedule"
-                className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-              >
-                View Schedule
-              </Link>
+            <div>
+              <p className="text-xl font-black tracking-tight text-white">CricPulse</p>
+              <p className="text-[11px] uppercase tracking-[0.26em] text-slate-400">Advanced Cricket Platform</p>
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            {Object.entries(footerLinks).map(([title, links]) => (
-              <div key={title} className="rounded-[28px] border border-white/10 bg-white/5 p-6 shadow-xl">
-                <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">{title}</h4>
-                <div className="mt-4 flex flex-col gap-2">
-                  {links.map((item) => (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className="rounded-xl px-3 py-2 text-sm text-slate-300 transition hover:bg-white/5 hover:text-white"
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <p className="mt-5 max-w-md text-sm leading-7 text-slate-400">
+            Follow live cricket scores, recent overs, player momentum, schedules, points table, search, and match detail pages in one responsive experience.
+          </p>
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              to="/live"
+              className="rounded-full bg-emerald-400 px-5 py-2.5 text-sm font-black text-slate-950 transition hover:scale-[1.02]"
+            >
+              Open Live
+            </Link>
+            <Link
+              to="/search"
+              className="rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/10 hover:text-white"
+            >
+              Search Platform
+            </Link>
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col gap-3 border-t border-white/10 pt-6 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 CricPulse. Built for live cricket experiences.</p>
-          <p>Responsive sports interface with live score and batting-first navigation.</p>
+        <FooterColumn title="Platform" items={footerLinks.platform} />
+        <FooterColumn title="Explore" items={footerLinks.explore} />
+        <FooterColumn title="Insights" items={footerLinks.insights} />
+      </div>
+
+      <div className="border-t border-white/10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-5 text-sm text-slate-500 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
+          <p>© 2026 CricPulse. Built for responsive live cricket experiences.</p>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link to="/series" className="transition hover:text-emerald-300">Series</Link>
+            <Link to="/players" className="transition hover:text-emerald-300">Players</Link>
+            <Link to="/points-table" className="transition hover:text-emerald-300">Points Table</Link>
+          </div>
         </div>
       </div>
     </footer>

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
+import useApi from "./useApi"; // <-- Naya import add kar diya hai
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const fallbackMatch = {
-  id: "fallback-1",
-  matchId: "fallback-1",
+  id: "match-1",
+  matchId: "match-1",
   name: "Mumbai Indians vs Chennai Super Kings",
   status: "Live",
   venue: "Wankhede Stadium",
@@ -17,6 +18,7 @@ const fallbackMatch = {
   battingTeam: "Mumbai Indians",
   bowlingTeam: "Chennai Super Kings",
   lastBall: "4",
+  required: "Need 24 runs in 8 balls",
   recentOvers: ["1 4 1 0 6 2", "1 1 4 W 2 1", "6 1 1 2 4 0"],
   striker: { name: "S. Yadav", runs: 58, balls: 34, sr: 170.5 },
   nonStriker: { name: "H. Pandya", runs: 21, balls: 12, sr: 175.0 },
@@ -45,13 +47,11 @@ const normalizeMatch = (item) => {
     striker: item.striker || fallbackMatch.striker,
     nonStriker: item.nonStriker || fallbackMatch.nonStriker,
     bowler: item.bowler || fallbackMatch.bowler,
-    hotstarUrl:
-      typeof item.hotstarUrl === "string"
-        ? item.hotstarUrl
-        : fallbackMatch.hotstarUrl,
+    hotstarUrl: typeof item.hotstarUrl === "string" ? item.hotstarUrl : fallbackMatch.hotstarUrl,
   };
 };
 
+// --- 1. Real-time Socket Hook (Default Export) ---
 export default function useLiveMatch() {
   const [match, setMatch] = useState(fallbackMatch);
   const [matches, setMatches] = useState([fallbackMatch]);
@@ -91,9 +91,7 @@ export default function useLiveMatch() {
           ? matchesData.map(normalizeMatch)
           : [fallbackMatch];
 
-        const mergedMatches = normalizedMatches.length
-          ? normalizedMatches
-          : [normalizedFeatured];
+        const mergedMatches = normalizedMatches.length ? normalizedMatches : [normalizedFeatured];
 
         setMatch(normalizedFeatured);
         setMatches(mergedMatches);
@@ -131,13 +129,11 @@ export default function useLiveMatch() {
       const normalizedPayload = normalizeMatch(payload);
 
       setMatch((prev) => normalizeMatch({ ...prev, ...normalizedPayload }));
+
       setMatches((prev) => {
-        const current = Array.isArray(prev) && prev.length ? prev : [fallbackMatch];
-        const next = [...current];
+        const next = Array.isArray(prev) ? [...prev] : [];
         const index = next.findIndex(
-          (item) =>
-            item?.id === normalizedPayload?.id ||
-            item?.matchId === normalizedPayload?.matchId
+          (x) => x.id === normalizedPayload.id || x.matchId === normalizedPayload.matchId
         );
 
         if (index >= 0) {
@@ -145,8 +141,8 @@ export default function useLiveMatch() {
         } else {
           next.unshift(normalizedPayload);
         }
-
-        return next;
+        
+        return next.length ? next : [normalizedPayload];
       });
     });
 
@@ -160,4 +156,16 @@ export default function useLiveMatch() {
   }, []);
 
   return { match, matches, loading, error };
+}
+
+// --- 2. Simple Fetch/Polling Hook (Named Export) ---
+export function useLiveMatches() {
+  const { data, loading, error, refetch } = useApi("/api/live-matches", { initialData: [] });
+  
+  return {
+    matches: Array.isArray(data) ? data : [],
+    loading,
+    error,
+    refetch,
+  };
 }
