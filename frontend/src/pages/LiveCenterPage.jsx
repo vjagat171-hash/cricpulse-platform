@@ -14,6 +14,10 @@ export default function LiveCenterPage() {
     );
   }
 
+  const featuredMatch = match || (Array.isArray(matches) ? matches[0] : null);
+  const safeMatches = Array.isArray(matches) ? matches : [];
+  const otherMatches = safeMatches.filter((item) => item?.id !== featuredMatch?.id);
+
   return (
     <div className="space-y-6">
       {error ? (
@@ -22,9 +26,17 @@ export default function LiveCenterPage() {
         </div>
       ) : null}
 
-      <LiveScoreCard match={match} />
-      <BattingPanel match={match} />
-      <RecentOvers overs={match?.recentOvers || []} />
+      {featuredMatch ? (
+        <>
+          <LiveScoreCard match={featuredMatch} />
+          <BattingPanel match={featuredMatch} />
+          <RecentOvers overs={featuredMatch?.recentOvers || []} />
+        </>
+      ) : (
+        <div className="rounded-[24px] border border-dashed border-white/10 bg-slate-900/70 p-10 text-center text-slate-400 shadow-xl">
+          No featured live match available right now.
+        </div>
+      )}
 
       <section className="rounded-[24px] border border-white/10 bg-slate-900/80 p-5 shadow-xl">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -36,15 +48,25 @@ export default function LiveCenterPage() {
         </div>
 
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {matches.map((item) => (
-            <article key={item.id} className="rounded-2xl border border-white/5 bg-slate-950/70 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-emerald-400">{item.status}</p>
-              <h4 className="mt-2 text-lg font-bold text-white">{item.name}</h4>
-              <p className="mt-1 text-sm text-slate-400">{item.venue}</p>
-              <p className="mt-4 text-sm text-slate-200">{item.teamA}: {item.scoreA || item.score}</p>
-              <p className="mt-1 text-sm text-slate-200">{item.teamB}: {item.scoreB}</p>
-            </article>
-          ))}
+          {otherMatches.length ? (
+            otherMatches.map((item) => (
+              <article key={item.id || item.matchId} className="rounded-2xl border border-white/5 bg-slate-950/70 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-emerald-400">{item.status || "Live"}</p>
+                <h4 className="mt-2 text-lg font-bold text-white">{item.name || `${item.teamA} vs ${item.teamB}`}</h4>
+                <p className="mt-1 text-sm text-slate-400">{item.venue || "Venue TBA"}</p>
+                <p className="mt-4 text-sm text-slate-200">
+                  {item.teamA || "Team A"}: {item.scoreA || item.score || "Yet to bat"}
+                </p>
+                <p className="mt-1 text-sm text-slate-200">
+                  {item.teamB || "Team B"}: {item.scoreB || "Yet to bat"}
+                </p>
+              </article>
+            ))
+          ) : (
+            <div className="rounded-[24px] border border-dashed border-white/10 bg-slate-900/70 p-8 text-center text-slate-400 md:col-span-2 xl:col-span-3">
+              No additional live matches available right now.
+            </div>
+          )}
         </div>
       </section>
     </div>

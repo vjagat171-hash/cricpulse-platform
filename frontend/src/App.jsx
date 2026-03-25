@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { io } from "socket.io-client";
 import Header from "./components/Header";
@@ -38,6 +38,7 @@ const fallbackData = {
     winProbability: { batting: 64, bowling: 36 },
     lastBall: "4",
     embedUrl: "",
+    hotstarUrl: "https://www.hotstar.com/in/sports/cricket",
   },
   schedule: [
     {
@@ -118,6 +119,10 @@ const normalizeLiveMatch = (data) => {
     nonStriker: data.nonStriker || fallbackData.liveMatch.nonStriker,
     bowler: data.bowler || fallbackData.liveMatch.bowler,
     embedUrl: typeof data.embedUrl === "string" ? data.embedUrl : "",
+    hotstarUrl:
+      typeof data.hotstarUrl === "string"
+        ? data.hotstarUrl
+        : fallbackData.liveMatch.hotstarUrl,
   };
 };
 
@@ -128,14 +133,16 @@ export default function App() {
   const [news, setNews] = useState(fallbackData.news);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const socket = useMemo(
-    () => io(API_BASE_URL, { transports: ["websocket", "polling"] }),
-    []
-  );
+  const serverReachableRef = useRef(false);
 
   useEffect(() => {
     let active = true;
+    const socket = io(API_BASE_URL, {
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      timeout: 10000,
+    });
 
     const loadInitialData = async () => {
       try {
@@ -149,20 +156,24 @@ export default function App() {
           fetch(`${API_BASE_URL}/api/news`),
         ]);
 
+        if (!active) return;
+
+        serverReachableRef.current = true;
+
         const liveData = liveRes.ok ? await liveRes.json() : fallbackData.liveMatch;
         const scheduleData = scheduleRes.ok ? await scheduleRes.json() : fallbackData.schedule;
         const teamsData = teamsRes.ok ? await teamsRes.json() : fallbackData.teams;
         const newsData = newsRes.ok ? await newsRes.json() : fallbackData.news;
 
-        if (!active) return;
-
         setLiveMatch(normalizeLiveMatch(liveData));
         setSchedule(Array.isArray(scheduleData) ? scheduleData : fallbackData.schedule);
         setTeams(Array.isArray(teamsData) ? teamsData : fallbackData.teams);
         setNews(Array.isArray(newsData) ? newsData : fallbackData.news);
+        setError("");
       } catch (err) {
         if (!active) return;
-        setError("Live server unavailable, fallback data is being used.");
+        serverReachableRef.current = false;
+        setError("Backend server reachable nahi hai, isliye fallback demo data show ho raha hai.");
         setLiveMatch(fallbackData.liveMatch);
         setSchedule(fallbackData.schedule);
         setTeams(fallbackData.teams);
@@ -174,8 +185,18 @@ export default function App() {
 
     loadInitialData();
 
+    socket.on("connect", () => {
+      if (!active) return;
+      if (serverReachableRef.current) {
+        setError("");
+      }
+    });
+
     socket.on("connect_error", () => {
-      setError((prev) => prev || "Realtime server not connected. Static fallback is active.");
+      if (!active) return;
+      if (!serverReachableRef.current) {
+        setError("Realtime socket connect nahi ho paaya, fallback data active hai.");
+      }
     });
 
     socket.on("live-match-update", (payload) => {
@@ -185,11 +206,12 @@ export default function App() {
 
     return () => {
       active = false;
+      socket.off("connect");
       socket.off("connect_error");
       socket.off("live-match-update");
       socket.disconnect();
     };
-  }, [socket]);
+  }, []);
 
   return (
     <BrowserRouter>

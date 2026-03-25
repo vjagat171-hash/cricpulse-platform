@@ -8,39 +8,47 @@ function StatBlock({ label, value }) {
 }
 
 export default function BattingPanel({ match }) {
-  const striker = match?.striker;
-  const nonStriker = match?.nonStriker;
-  const bowler = match?.bowler;
+  if (!match) {
+    return (
+      <section className="rounded-[24px] border border-dashed border-white/10 bg-slate-900/70 p-10 text-center text-slate-400 shadow-xl">
+        No batting details available right now.
+      </section>
+    );
+  }
+
+  const striker = match?.striker || {};
+  const nonStriker = match?.nonStriker || {};
+  const bowler = match?.bowler || {};
 
   return (
     <section className="grid gap-4 lg:grid-cols-3">
       <div className="rounded-[24px] border border-white/10 bg-slate-900/80 p-5 shadow-xl">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">Striker</p>
-        <h3 className="mt-2 text-2xl font-black text-white">{striker?.name || "N/A"}</h3>
+        <h3 className="mt-2 text-2xl font-black text-white">{striker.name || "N/A"}</h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-          <StatBlock label="Runs" value={striker?.runs ?? "-"} />
-          <StatBlock label="Balls" value={striker?.balls ?? "-"} />
-          <StatBlock label="SR" value={striker?.sr ?? "-"} />
+          <StatBlock label="Runs" value={striker.runs ?? "-"} />
+          <StatBlock label="Balls" value={striker.balls ?? "-"} />
+          <StatBlock label="SR" value={striker.sr ?? "-"} />
         </div>
       </div>
 
       <div className="rounded-[24px] border border-white/10 bg-slate-900/80 p-5 shadow-xl">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-400">Non-striker</p>
-        <h3 className="mt-2 text-2xl font-black text-white">{nonStriker?.name || "N/A"}</h3>
+        <h3 className="mt-2 text-2xl font-black text-white">{nonStriker.name || "N/A"}</h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-          <StatBlock label="Runs" value={nonStriker?.runs ?? "-"} />
-          <StatBlock label="Balls" value={nonStriker?.balls ?? "-"} />
-          <StatBlock label="SR" value={nonStriker?.sr ?? "-"} />
+          <StatBlock label="Runs" value={nonStriker.runs ?? "-"} />
+          <StatBlock label="Balls" value={nonStriker.balls ?? "-"} />
+          <StatBlock label="SR" value={nonStriker.sr ?? "-"} />
         </div>
       </div>
 
       <div className="rounded-[24px] border border-white/10 bg-slate-900/80 p-5 shadow-xl">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-400">Current bowler</p>
-        <h3 className="mt-2 text-2xl font-black text-white">{bowler?.name || "N/A"}</h3>
+        <h3 className="mt-2 text-2xl font-black text-white">{bowler.name || "N/A"}</h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
-          <StatBlock label="Overs" value={bowler?.overs ?? "-"} />
-          <StatBlock label="Runs" value={bowler?.runs ?? "-"} />
-          <StatBlock label="Wkts" value={bowler?.wickets ?? "-"} />
+          <StatBlock label="Overs" value={bowler.overs ?? "-"} />
+          <StatBlock label="Runs" value={bowler.runs ?? "-"} />
+          <StatBlock label="Wkts" value={bowler.wickets ?? "-"} />
         </div>
       </div>
     </section>

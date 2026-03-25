@@ -37,7 +37,11 @@ export default function LivePage({ match, loading }) {
         description="Scoreboard, batter-vs-bowler detail, recent overs, and win pressure ek hi page me."
       />
 
-      <LiveVideo embedUrl={match?.embedUrl} title={`${match?.teamA || "Match"} live stream`} />
+      <LiveVideo
+        embedUrl={match?.embedUrl}
+        hotstarUrl={match?.hotstarUrl}
+        title={`${match?.teamA || "Match"} live stream`}
+      />
 
       <section className="rounded-[28px] border border-white/10 bg-slate-900/80 p-5 shadow-xl sm:p-6 lg:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

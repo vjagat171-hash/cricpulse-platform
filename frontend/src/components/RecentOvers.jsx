@@ -1,4 +1,6 @@
 export default function RecentOvers({ overs = [] }) {
+  const safeOvers = Array.isArray(overs) ? overs : [];
+
   return (
     <section className="rounded-[24px] border border-white/10 bg-slate-900/80 p-5 shadow-xl">
       <div className="flex items-center justify-between gap-4">
@@ -9,14 +11,17 @@ export default function RecentOvers({ overs = [] }) {
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {overs.length ? (
-          overs.map((item, index) => (
-            <div key={index} className="rounded-2xl border border-white/5 bg-slate-950/70 px-4 py-4 text-sm font-medium text-slate-200">
-              Over {index + 1}: {item}
+        {safeOvers.length ? (
+          safeOvers.map((item, index) => (
+            <div
+              key={index}
+              className="rounded-2xl border border-white/5 bg-slate-950/70 px-4 py-4 text-sm font-medium text-slate-200"
+            >
+              Over {index + 1}: {item || "-"}
             </div>
           ))
         ) : (
-          <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/60 px-4 py-5 text-sm text-slate-500">
+          <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/60 px-4 py-5 text-sm text-slate-500 sm:col-span-2 xl:col-span-3">
             No recent overs data available.
           </div>
         )}

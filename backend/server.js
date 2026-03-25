@@ -87,11 +87,13 @@ const fallbackMatches = [
     teamA: "Mumbai Indians",
     teamB: "Chennai Super Kings",
     lastBall: "4",
+    hotstarUrl: "https://www.hotstar.com/in/sports/cricket",
   },
 ];
 
 let featuredLiveMatch = {
   matchId: "fallback-1",
+  name: "Mumbai Indians vs Chennai Super Kings",
   teamA: "Mumbai Indians",
   teamB: "Chennai Super Kings",
   battingTeam: "Mumbai Indians",
@@ -111,6 +113,7 @@ let featuredLiveMatch = {
   status: "Live - 18.4 Overs",
   lastBall: "4",
   embedUrl: "",
+  hotstarUrl: "https://www.hotstar.com/in/sports/cricket",
 };
 
 function normalizeCricApiMatch(match, index = 0) {
@@ -140,6 +143,7 @@ function normalizeCricApiMatch(match, index = 0) {
     battingTeam: teamA,
     bowlingTeam: teamB,
     lastBall: "Live",
+    hotstarUrl: "https://www.hotstar.com/in/sports/cricket",
   };
 }
 
@@ -191,6 +195,7 @@ app.get("/api/live-match", async (req, res) => {
   featuredLiveMatch = {
     ...featuredLiveMatch,
     matchId: firstMatch.id,
+    name: firstMatch.name || `${firstMatch.teamA} vs ${firstMatch.teamB}`,
     teamA: firstMatch.teamA,
     teamB: firstMatch.teamB,
     battingTeam: firstMatch.teamA,
@@ -202,6 +207,7 @@ app.get("/api/live-match", async (req, res) => {
     status: firstMatch.status,
     lastBall: firstMatch.lastBall || featuredLiveMatch.lastBall,
     embedUrl: "",
+    hotstarUrl: firstMatch.hotstarUrl || featuredLiveMatch.hotstarUrl,
   };
 
   res.json(featuredLiveMatch);

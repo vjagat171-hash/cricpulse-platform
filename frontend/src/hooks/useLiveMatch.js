@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const fallbackMatch = {
   id: "fallback-1",
+  matchId: "fallback-1",
   name: "Mumbai Indians vs Chennai Super Kings",
   status: "Live",
   venue: "Wankhede Stadium",
@@ -20,40 +21,53 @@ const fallbackMatch = {
   striker: { name: "S. Yadav", runs: 58, balls: 34, sr: 170.5 },
   nonStriker: { name: "H. Pandya", runs: 21, balls: 12, sr: 175.0 },
   bowler: { name: "K. Yadav", overs: "3.4", runs: 31, wickets: 1 },
+  hotstarUrl: "https://www.hotstar.com/in/sports/cricket",
 };
 
 const normalizeMatch = (item) => {
   if (!item) return fallbackMatch;
 
+  const teamA = item.teamA || item.battingTeam || fallbackMatch.teamA;
+  const teamB = item.teamB || item.bowlingTeam || fallbackMatch.teamB;
+
   return {
     ...fallbackMatch,
     ...item,
+    matchId: item.matchId || item.id || fallbackMatch.matchId,
+    name: item.name || `${teamA} vs ${teamB}`,
     scoreA: item.scoreA || item.score || fallbackMatch.scoreA,
     scoreB: item.scoreB || fallbackMatch.scoreB,
-    teamA: item.teamA || item.battingTeam || fallbackMatch.teamA,
-    teamB: item.teamB || item.bowlingTeam || fallbackMatch.teamB,
-    battingTeam: item.battingTeam || item.teamA || fallbackMatch.battingTeam,
-    bowlingTeam: item.bowlingTeam || item.teamB || fallbackMatch.bowlingTeam,
+    teamA,
+    teamB,
+    battingTeam: item.battingTeam || teamA,
+    bowlingTeam: item.bowlingTeam || teamB,
     recentOvers: Array.isArray(item.recentOvers) ? item.recentOvers : fallbackMatch.recentOvers,
     striker: item.striker || fallbackMatch.striker,
     nonStriker: item.nonStriker || fallbackMatch.nonStriker,
     bowler: item.bowler || fallbackMatch.bowler,
+    hotstarUrl:
+      typeof item.hotstarUrl === "string"
+        ? item.hotstarUrl
+        : fallbackMatch.hotstarUrl,
   };
 };
 
 export default function useLiveMatch() {
   const [match, setMatch] = useState(fallbackMatch);
-  const [matches, setMatches] = useState([]);
+  const [matches, setMatches] = useState([fallbackMatch]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const socket = useMemo(
-    () => io(API_BASE_URL, { transports: ["websocket", "polling"] }),
-    []
-  );
+  const serverReachableRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
+
+    const socket = io(API_BASE_URL, {
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      timeout: 10000,
+    });
 
     async function loadData() {
       try {
@@ -65,15 +79,29 @@ export default function useLiveMatch() {
           fetch(`${API_BASE_URL}/api/live-matches`),
         ]);
 
+        if (!mounted) return;
+
+        serverReachableRef.current = true;
+
         const matchData = matchRes.ok ? await matchRes.json() : fallbackMatch;
         const matchesData = matchesRes.ok ? await matchesRes.json() : [fallbackMatch];
 
-        if (!mounted) return;
-        setMatch(normalizeMatch(matchData));
-        setMatches(Array.isArray(matchesData) ? matchesData.map(normalizeMatch) : [fallbackMatch]);
+        const normalizedFeatured = normalizeMatch(matchData);
+        const normalizedMatches = Array.isArray(matchesData)
+          ? matchesData.map(normalizeMatch)
+          : [fallbackMatch];
+
+        const mergedMatches = normalizedMatches.length
+          ? normalizedMatches
+          : [normalizedFeatured];
+
+        setMatch(normalizedFeatured);
+        setMatches(mergedMatches);
+        setError("");
       } catch (err) {
         if (!mounted) return;
-        setError("Live API unavailable. Fallback data loaded.");
+        serverReachableRef.current = false;
+        setError("Backend reachable nahi hai, fallback live data show ho raha hai.");
         setMatch(fallbackMatch);
         setMatches([fallbackMatch]);
       } finally {
@@ -83,17 +111,53 @@ export default function useLiveMatch() {
 
     loadData();
 
+    socket.on("connect", () => {
+      if (!mounted) return;
+      if (serverReachableRef.current) {
+        setError("");
+      }
+    });
+
+    socket.on("connect_error", () => {
+      if (!mounted) return;
+      if (!serverReachableRef.current) {
+        setError("Realtime socket connect nahi ho paaya, fallback data active hai.");
+      }
+    });
+
     socket.on("live-match-update", (payload) => {
       if (!mounted || !payload) return;
-      setMatch((prev) => normalizeMatch({ ...prev, ...payload }));
+
+      const normalizedPayload = normalizeMatch(payload);
+
+      setMatch((prev) => normalizeMatch({ ...prev, ...normalizedPayload }));
+      setMatches((prev) => {
+        const current = Array.isArray(prev) && prev.length ? prev : [fallbackMatch];
+        const next = [...current];
+        const index = next.findIndex(
+          (item) =>
+            item?.id === normalizedPayload?.id ||
+            item?.matchId === normalizedPayload?.matchId
+        );
+
+        if (index >= 0) {
+          next[index] = normalizeMatch({ ...next[index], ...normalizedPayload });
+        } else {
+          next.unshift(normalizedPayload);
+        }
+
+        return next;
+      });
     });
 
     return () => {
       mounted = false;
+      socket.off("connect");
+      socket.off("connect_error");
       socket.off("live-match-update");
       socket.disconnect();
     };
-  }, [socket]);
+  }, []);
 
   return { match, matches, loading, error };
 }

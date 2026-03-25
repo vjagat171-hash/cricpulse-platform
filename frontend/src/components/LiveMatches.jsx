@@ -2,22 +2,29 @@ import { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import useLiveMatch from "../hooks/useLiveMatch";
 
-// Socket setup
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-const socket = io(API_BASE_URL, { transports: ["websocket", "polling"] });
 
 export default function LiveMatches() {
   const { matches, loading, error } = useLiveMatch();
   const [realTimeMatch, setRealTimeMatch] = useState(null);
 
-  // Real-time socket listener for the featured match
   useEffect(() => {
+    const socket = io(API_BASE_URL, {
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      timeout: 10000,
+    });
+
     socket.on("live-match-update", (data) => {
-      setRealTimeMatch(data);
+      if (data) {
+        setRealTimeMatch(data);
+      }
     });
 
     return () => {
       socket.off("live-match-update");
+      socket.disconnect();
     };
   }, []);
 
@@ -31,32 +38,37 @@ export default function LiveMatches() {
     );
   }
 
+  const allMatches = Array.isArray(matches) ? matches : [];
+  const visibleMatches = realTimeMatch
+    ? allMatches.filter(
+        (match) =>
+          match?.id !== realTimeMatch?.id &&
+          match?.matchId !== realTimeMatch?.matchId
+      )
+    : allMatches;
+
   return (
     <div className="min-h-screen bg-[#121212] p-5 font-sans">
       <div className="mx-auto max-w-7xl space-y-8">
-        
-        {/* Header */}
         <h2 className="mt-4 text-center text-3xl font-black text-sky-400 drop-shadow-md md:text-4xl">
-          🏏 CricPulse Dashboard
+          CricPulse Dashboard
         </h2>
 
-        {/* Error State */}
         {error ? (
           <div className="mx-auto max-w-2xl rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-center text-sm text-amber-200">
             {error}
           </div>
         ) : null}
 
-        {/* FEATURED LIVE MATCH (Real-Time from Socket) */}
-        {realTimeMatch && (
+        {realTimeMatch ? (
           <div className="flex justify-center">
             <div className="w-full max-w-3xl rounded-[24px] border-2 border-emerald-500/80 bg-gradient-to-br from-[#122417] to-[#1a3300] p-6 shadow-[0_0_24px_rgba(0,230,118,0.15)]">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <span className="text-sm font-bold tracking-[0.15em] text-emerald-400 drop-shadow-sm">
-                  ● FEATURED LIVE
+                  FEATURED LIVE
                 </span>
                 <span className="rounded-full border border-emerald-500/30 bg-emerald-900/50 px-3 py-1 text-xs font-medium text-emerald-100">
-                  {realTimeMatch.status}
+                  {realTimeMatch.status || "Live"}
                 </span>
               </div>
 
@@ -70,7 +82,7 @@ export default function LiveMatches() {
                     {realTimeMatch.teamA}
                   </p>
                   <h4 className="mt-2 text-3xl font-black text-white">
-                    {realTimeMatch.scoreA}
+                    {realTimeMatch.scoreA || realTimeMatch.score || "0/0"}
                   </h4>
                 </div>
 
@@ -79,7 +91,7 @@ export default function LiveMatches() {
                     {realTimeMatch.teamB}
                   </p>
                   <h4 className="mt-2 text-3xl font-black text-white">
-                    {realTimeMatch.scoreB}
+                    {realTimeMatch.scoreB || "Yet to bat"}
                   </h4>
                 </div>
               </div>
@@ -92,14 +104,13 @@ export default function LiveMatches() {
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
-        {/* ALL LIVE MATCHES GRID (From Custom Hook) */}
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {matches.length ? (
-            matches.map((match) => (
+          {visibleMatches.length ? (
+            visibleMatches.map((match) => (
               <article
-                key={match.id}
+                key={match.id || match.matchId}
                 className="rounded-[24px] border border-white/10 bg-slate-900/80 p-5 shadow-xl transition duration-300 hover:-translate-y-1 hover:border-emerald-400/20"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -117,12 +128,12 @@ export default function LiveMatches() {
                 <div className="mt-5 space-y-3">
                   <div className="rounded-2xl bg-slate-950/70 p-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-sky-400">{match.teamA}</p>
-                    <p className="mt-2 text-2xl font-black text-white">{match.scoreA || match.score}</p>
+                    <p className="mt-2 text-2xl font-black text-white">{match.scoreA || match.score || "0/0"}</p>
                   </div>
 
                   <div className="rounded-2xl bg-slate-950/70 p-4">
                     <p className="text-xs uppercase tracking-[0.18em] text-amber-400">{match.teamB}</p>
-                    <p className="mt-2 text-2xl font-black text-white">{match.scoreB}</p>
+                    <p className="mt-2 text-2xl font-black text-white">{match.scoreB || "Yet to bat"}</p>
                   </div>
                 </div>
               </article>
@@ -133,7 +144,6 @@ export default function LiveMatches() {
             </div>
           )}
         </div>
-        
       </div>
     </div>
   );

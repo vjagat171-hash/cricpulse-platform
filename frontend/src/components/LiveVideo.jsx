@@ -6,14 +6,11 @@ export default function LiveVideo({
   const isEmbeddable =
     typeof embedUrl === "string" &&
     embedUrl.trim() !== "" &&
-    (
-      embedUrl.includes("youtube.com/embed/") ||
-      embedUrl.includes("player.vimeo.com/video/")
-    );
+    (embedUrl.includes("youtube.com/embed/") ||
+      embedUrl.includes("player.vimeo.com/video/"));
 
   const hasHotstarLink =
-    typeof hotstarUrl === "string" &&
-    hotstarUrl.includes("hotstar.com");
+    typeof hotstarUrl === "string" && hotstarUrl.includes("hotstar.com");
 
   if (isEmbeddable) {
     return (
