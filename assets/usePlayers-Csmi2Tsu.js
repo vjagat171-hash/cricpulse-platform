@@ -1,0 +1,1 @@
+import{t as e}from"./useApi-CTcUtAgA.js";function t(){let{data:t,loading:n,error:r,refetch:i}=e(`/api/players`,{initialData:[]});return{players:Array.isArray(t)?t:[],loading:n,error:r,refetch:i}}export{t};

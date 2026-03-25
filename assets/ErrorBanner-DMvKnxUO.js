@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-D-oznMWL.js";var t=e();function n({message:e}){return e?(0,t.jsx)(`div`,{className:`rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200`,children:e}):null}export{n as t};
